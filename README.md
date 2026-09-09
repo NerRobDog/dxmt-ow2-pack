@@ -86,12 +86,21 @@ It does not see Rosetta's address space or Metal's allocations. Use `footprint` 
 ## Anti-cheat
 
 Overwatch has one, and nothing here hides from it or interferes with it: this is a graphics
-translation layer under Wine, the same category of thing as CrossOver's own backends.
+translation layer, the same category of thing as CrossOver's own backends.
 
-This configuration has been played on daily since 2026-08-31 — roughly **15 hours of matches in
-the first week**, across a MacBook Pro M1 Pro and a MacBook Air M5 — with **no account action
-taken**. That is an observation, not a guarantee, and not a statement about Blizzard's policy on
-running the game under Wine at all. Play at your own risk.
+What has actually been played, and on what: roughly **15 hours of matches in the first week**
+since 2026-08-31, across a MacBook Pro M1 Pro and a MacBook Air M5, **on CrossOver's own Wine
+engine** with this repository's DXMT and configuration on top — with **no account action taken**.
+
+That is an observation about that setup, not a guarantee, and not a statement about Blizzard's
+policy on running the game under Wine at all.
+
+**It does not carry over to the standalone pack** described under "What is missing". That pack
+would replace CrossOver's engine with a Wine build of our own, and how the anti-cheat treats a
+different engine has not been tested. Until it has, the only configuration with hours behind it
+is the bottle-based one on this page.
+
+Play at your own risk.
 
 ## What is missing
 
@@ -104,7 +113,9 @@ running the game under Wine at all. Play at your own risk.
   yet. `--verify` exists to tell you which DXMT actually got loaded. If CrossOver's bundled copy
   wins, open an issue rather than patching the bundle.
 - No engine of our own, so CrossOver is still required at runtime. The AoE IV pack shows the
-  shape this should take.
+  shape this should take. Note that the anti-cheat evidence above was gathered on CrossOver's
+  engine and says nothing about a different one — swapping the engine is a change that has to be
+  tested on its own, cautiously, before anyone is told to run it.
 - Shader caches are never distributed here: they are derived from Blizzard's content.
 
 ## Licenses
