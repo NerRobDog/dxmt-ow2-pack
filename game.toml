@@ -1,0 +1,13 @@
+[game]
+name   = "Overwatch 2"
+id     = "ow2"
+status = "wip"
+home   = "~/ow2-pack"
+
+notes = """
+Playable on the DXMT fork: d3d11.releaseShaderIR takes the game from 13 GB resident to 3.8 GB
+and stops the swapping, and preferredMaxFrameRate=60 turns a 38-87 fps sawtooth into a flat
+16.67 ms. Install is still bottle-based and hand-driven — install-dxmt.sh puts a DXMT build you
+compiled into an existing CrossOver bottle — so the launcher keeps every action at SOON until
+this repository ships an engine and a setup.sh of its own.
+"""
