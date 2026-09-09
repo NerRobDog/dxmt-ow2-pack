@@ -88,10 +88,10 @@ It does not see Rosetta's address space or Metal's allocations. Use `footprint` 
 Overwatch has one, and nothing here hides from it or interferes with it: this is a graphics
 translation layer under Wine, the same category of thing as CrossOver's own backends.
 
-The session logs in this repository cover about 3.5 hours of matches across two Macs, and the
-configuration has been played on daily since 2026-08-31, with **no account action taken**. That
-is an observation, not a guarantee, and not a statement about Blizzard's policy on running the
-game under Wine at all. Play at your own risk.
+This configuration has been played on daily since 2026-08-31 — roughly **15 hours of matches in
+the first week**, across a MacBook Pro M1 Pro and a MacBook Air M5 — with **no account action
+taken**. That is an observation, not a guarantee, and not a statement about Blizzard's policy on
+running the game under Wine at all. Play at your own risk.
 
 ## What is missing
 
