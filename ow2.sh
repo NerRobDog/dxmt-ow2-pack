@@ -27,6 +27,15 @@
 set -eu
 
 HOME_DIR="__HOME__"
+# In the pack this file is a template; setup.sh writes the filled-in copy into the
+# home and that is the one satoru and the person run. Someone who unpacked a tarball
+# and ran this one deserves a sentence rather than a failure about a directory called
+# __HOME__.
+case "$HOME_DIR" in
+    __HOME*) printf 'this is the copy inside the pack, and it is a template: the paths are
+filled in at install time. Run `bash setup.sh` first, then the copy it puts in the game
+home.\n' >&2; exit 10 ;;
+esac
 . "$HOME_DIR/common.sh"
 CX="${CX_ROOT:-/Applications/CrossOver.app/Contents/SharedSupport/CrossOver}"
 CXENV="$HOME_DIR/cxenv.py"
