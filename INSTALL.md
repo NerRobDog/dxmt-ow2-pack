@@ -4,42 +4,93 @@
 
 - Apple Silicon Mac, macOS 26 or newer
 - CrossOver 26.3 with a working Battle.net bottle and Overwatch installed in it
-- A DXMT build from [`NerRobDog/dxmt`](https://github.com/NerRobDog/dxmt), branch `main`
+- Nothing else. The pack brings its own DXMT.
 
-There is no binary release of this pack yet, so the third item means building DXMT yourself.
-The fork builds with meson + a mingw cross toolchain; an incremental build is about a minute
-once the toolchain is set up. Run `meson setup --reconfigure` before the build you intend to
-install — the version stamp inside `d3d11.dll` is generated at configure time, and
-`install-dxmt.sh` refuses a set without one.
-
-The build you pass in must contain, from one build directory:
-
-```
-x86_64-windows/d3d11.dll
-x86_64-windows/dxgi.dll
-x86_64-windows/d3d10core.dll
-x86_64-unix/winemetal.so
-```
+This pack does not ship a Wine engine, so CrossOver is required at runtime. The bottle may live
+anywhere — an external volume is fine, and so is a name other than the default.
 
 ## Install
 
+From an unpacked release:
+
 ```sh
-./install-dxmt.sh --dlls /path/to/dxmt/build
+bash setup.sh --preflight     # can this machine run it? answers, writes nothing
+bash setup.sh                 # install
 ```
 
-The bottle defaults to `Battle.net Desktop App`; pass `--bottle "<name>"` for a different one.
-The script:
+`--preflight` checks the machine, the pack's own files and the bottle, and reports what is
+missing without leaving anything behind. It exits `0` when it is ready, `10` when the machine is
+not (with the reason), `11` when the pack is already installed, `12` when the pack's own files do
+not match the hashes it shipped with.
 
-1. checks that `d3d11.dll` carries a version stamp, and that all four files came out of one
-   build (their timestamps must be within ten minutes of each other);
-2. copies them into `<bottle>/dxmt/`, never into `/Applications/CrossOver.app`;
-3. prints the md5 of each installed file;
-4. backs up `cxbottle.conf` once, to `cxbottle.conf.dxmt-ow2-pack.bak`;
-5. writes `WINEDLLPATH`, `WINEDLLOVERRIDES=dxgi,d3d11,d3d10core=n,b`, `DXMT_CONFIG_FILE`,
-   `DXMT_USE_DEFAULT_METAL_CACHE=1`, `DXMT_METALFX_SPATIAL_SWAPCHAIN=1` and the log settings
-   into the bottle's `[EnvironmentVariables]`, and **removes** `CX_GRAPHICS_BACKEND` — with it
-   set to `dxmt`, CrossOver injects its own DLL overrides pointing at its bundled `lib/dxmt`,
-   which is the copy we are not using.
+Two environment variables matter, and only if the defaults are wrong:
+
+```sh
+OW2_BOTTLE="Battle.net Desktop App"                       # a name...
+OW2_BOTTLE="/Volumes/Games/Battle.net Desktop App"        # ...or a full path
+SATORU_GAME_HOME="$HOME/ow2-pack"                         # where the pack installs itself
+```
+
+The bottle is resolved the way CrossOver resolves it: an absolute path is taken as the bottle, a
+bare name is looked up in `CX_BOTTLE_PATH` and then in `~/Library/Application
+Support/CrossOver/Bottles`.
+
+### What it does to your machine
+
+| Where | What |
+|---|---|
+| the pack home | the DXMT build, `dxmt.conf`, `ow2.sh`, `README-local.txt`, `logs/` |
+| your bottle | one file edited — `cxbottle.conf`; the previous copy is kept as `cxbottle.conf.dxmt-ow2-pack.bak` |
+| anywhere else | nothing |
+
+In `cxbottle.conf` it sets `WINEDLLPATH` (pointing at the pack home, the directory that contains
+both `x86_64-windows/` and `x86_64-unix/`), `WINEDLLOVERRIDES=dxgi,d3d11,d3d10core=n,b`,
+`DXMT_CONFIG_FILE`, `DXMT_LOG_PATH`, `DXMT_USE_DEFAULT_METAL_CACHE` and
+`DXMT_METALFX_SPATIAL_SWAPCHAIN`, and it **removes** `CX_GRAPHICS_BACKEND` — with that set,
+CrossOver injects its own overrides pointing at its bundled `lib/dxmt`, which is the copy we are
+not using.
+
+Nothing is ever written inside `/Applications/CrossOver.app`.
+
+### If you built DXMT yourself
+
+```sh
+./install-dxmt.sh --dlls <your meson install directory>
+```
+
+That directory is what `meson install` produces: `x86_64-windows/` with `d3d11.dll`, `dxgi.dll`,
+`d3d10core.dll`, `winemetal.dll`, and `x86_64-unix/winemetal.so`. It checks that `d3d11.dll`
+carries a version stamp and that the files came out of one build, stages them as the pack's
+payload, and hands over to `setup.sh`.
+
+## Play
+
+```sh
+~/ow2-pack/ow2.sh              # or wherever SATORU_GAME_HOME pointed
+~/ow2-pack/ow2.sh --plain      # D3DMetal instead, for comparison
+~/ow2-pack/ow2.sh --dry-run    # print what it would run, do nothing
+```
+
+Use `ow2.sh` rather than CrossOver's window, at least the first time. A bottle reads its
+environment when a wine session starts, not when a program does, so launching into a session
+that Battle.net left running would quietly use the settings from before the install — which
+looks exactly like the pack doing nothing. `ow2.sh` refuses a busy bottle instead, and asks you
+to quit the game and Battle.net first. It never kills anyone's session.
+
+`--plain` takes this pack's block out of `cxbottle.conf` for one launch, puts
+`CX_GRAPHICS_BACKEND=d3dmetal` in its place, and restores the file when the session ends —
+including when you interrupt it. That is what makes the comparison honest: CrossOver's launcher
+assigns every key in that section unconditionally, so exporting a variable would not have
+changed anything.
+
+## Uninstall
+
+```sh
+bash uninstall.sh --dry-run    # lists the home and its size, removes nothing
+bash uninstall.sh              # removes the home, restores cxbottle.conf from the backup
+```
+
+The game, the bottle's contents and your Battle.net install are never touched.
 
 ## In the game
 
@@ -64,9 +115,9 @@ Start a match, then from another terminal:
 ./install-dxmt.sh --verify
 ```
 
-It reads the running game's loaded modules and reports how many came from your bottle, how many
-from CrossOver's bundle, and how many are D3DMetal. You want the first number above zero and the
-other two at zero.
+It reads the running game's loaded modules and reports how many came from this pack's home, how
+many from inside the bottle (an older layout), how many from CrossOver's bundle, and how many
+are D3DMetal. You want the first number above zero and the rest at zero.
 
 Two things this catches that guessing does not:
 
@@ -75,14 +126,14 @@ Two things this catches that guessing does not:
   the loaded modules of the **running game** tell you the truth, and the launcher is not the game.
 - If CrossOver's bundled DXMT wins, the fix is not to patch the bundle. Open an issue.
 
-## Undo
+## Undo just the bottle
 
 ```sh
 ./install-dxmt.sh --revert
 ```
 
-Restores the `cxbottle.conf` backup. The DLLs stay in `<bottle>/dxmt/`; delete that directory if
-you want them gone.
+Restores the `cxbottle.conf` backup and leaves the pack home alone — useful when you want the
+game back on CrossOver's own backend without removing anything. `uninstall.sh` does both.
 
 ## Check that the shader cache is doing its job
 

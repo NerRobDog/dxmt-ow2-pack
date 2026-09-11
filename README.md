@@ -6,11 +6,13 @@ of Apple's D3DMetal. Flat 60 fps, ~4 GB resident instead of 13 GB, and no swappi
 Part of [satoru](https://github.com/NerRobDog/satoru) — an open stack for running Windows games
 on Apple Silicon.
 
-> **Status: bottle-based, not a standalone pack yet.** This repository carries the reference
-> configuration, an installer that puts a DXMT build into your existing CrossOver bottle, and
-> the measurement scripts. It does **not** yet ship a Wine engine of its own the way
-> [dxmt-aoe4-pack](https://github.com/NerRobDog/dxmt-aoe4-pack) does, and there is **no binary
-> release yet** — you build DXMT from the fork. Both are planned; see "What is missing".
+> **Status: it installs itself, and it needs your CrossOver.** A release of this pack carries a
+> DXMT build and installs it with one command; there is no Wine engine of its own, the way
+> [dxmt-aoe4-pack](https://github.com/NerRobDog/dxmt-aoe4-pack) has one, so CrossOver with
+> Battle.net and Overwatch in a bottle is what you bring. If you are reading this in the
+> repository and the releases page is empty, build DXMT from
+> [the fork](https://github.com/NerRobDog/dxmt) and use `./install-dxmt.sh --dlls` — same code,
+> same result.
 
 ## What this changes
 
@@ -59,18 +61,30 @@ the installer sets both. In the game, keep **Graphics API on DX11** — DXMT has
 
 ## Install
 
-See [`INSTALL.md`](INSTALL.md). In brief: build DXMT from the fork, then
+See [`INSTALL.md`](INSTALL.md). From an unpacked release:
 
 ```
-./install-dxmt.sh --dlls <your dxmt build dir>
-./install-dxmt.sh --verify        # with a match running
+bash setup.sh --preflight         # can this machine run it? writes nothing
+bash setup.sh                     # install
+./ow2.sh                          # play
+./ow2.sh --plain                  # play on D3DMetal instead, for comparison
+bash uninstall.sh --dry-run       # what removing it would take away
 ```
 
-The installer writes **only inside your CrossOver bottle**. It will not touch
-`/Applications/CrossOver.app`: patching the application bundle breaks its code signature and the
-next CrossOver update silently reverts it. It also refuses a DLL set that did not come out of one
-build directory — a mixed set is the most reliable way to spend an evening chasing a bug that is
-not in the code.
+Built DXMT yourself? `./install-dxmt.sh --dlls <your meson install dir>` puts your build in the
+pack and hands over to the same installer.
+
+Where things land: the DLLs go into the pack's own home directory, and your bottle gets **one**
+edited file, `cxbottle.conf`, pointing at them — the previous copy is kept beside it as
+`cxbottle.conf.dxmt-ow2-pack.bak`. Nothing is written inside `/Applications/CrossOver.app`;
+patching the application bundle breaks its code signature and the next CrossOver update silently
+reverts it. The installer also refuses a DLL set that does not match the hashes the pack shipped
+with — a mixed set is the most reliable way to spend an evening chasing a bug that is not in the
+code.
+
+Start the game through `ow2.sh` rather than from CrossOver's window the first time. A bottle
+reads its environment when a wine session starts, so launching into a session Battle.net left
+running quietly uses the settings from before the install.
 
 ## Measurement scripts
 
@@ -104,14 +118,16 @@ Play at your own risk.
 
 ## What is missing
 
-- No binary release yet. The DLLs must come from one build of
-  [`NerRobDog/dxmt`](https://github.com/NerRobDog/dxmt) `main`, and a release is only cut after
-  a build is accepted the way the AoE IV pack is: a clean install, a match of 20 minutes or more
-  with frametime p50/p95/p99 and memory at both ends, on both machines.
 - The bottle-side override path — `WINEDLLPATH` and `WINEDLLOVERRIDES` in `cxbottle.conf`, with
-  `CX_GRAPHICS_BACKEND` deliberately left unset — has **not** been confirmed on a running match
-  yet. `--verify` exists to tell you which DXMT actually got loaded. If CrossOver's bundled copy
-  wins, open an issue rather than patching the bundle.
+  `CX_GRAPHICS_BACKEND` deliberately removed — has **not** been confirmed on a running match yet.
+  It could not have worked before: `WINEDLLPATH` named `<bottle>/dxmt/x86_64-windows`, one level
+  below the directory wine actually searches, so it was looking for
+  `x86_64-windows/x86_64-windows/d3d11.dll`. That is fixed, and unproven. `--verify`, run while a
+  match is going, reads the game's loaded modules and tells you which DXMT got in. If CrossOver's
+  bundled copy wins, open an issue rather than patching the bundle.
+- A release is only cut after a build is accepted the way the AoE IV pack is: a clean install
+  from the tarball, a match of 20 minutes or more with frametime p50/p95/p99 and memory at both
+  ends, on both machines. A version number here is not a claim that someone played on it.
 - No engine of our own, so CrossOver is still required at runtime. The AoE IV pack shows the
   shape this should take. Note that the anti-cheat evidence above was gathered on CrossOver's
   engine and says nothing about a different one — swapping the engine is a change that has to be
