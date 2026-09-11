@@ -34,7 +34,11 @@ for a in "$@"; do
 done
 
 HOME_DIR=$(pack_home)
-LOGS=$(logs_dir)
+# DXMT logs into the home, always. The manifest says [paths] logs = "logs", which
+# satoru resolves inside SATORU_GAME_HOME, so pointing the layer at SATORU_LOGS
+# instead would leave the launcher's "Open logs" looking at a directory that does
+# not exist. One place, and it is the one the manifest names.
+LOGS="$HOME_DIR/logs"
 
 # ---- checks. Every one of these is a read -------------------------------------
 [ "$(sysctl -n hw.optional.arm64 2>/dev/null || echo 0)" = "1" ] \

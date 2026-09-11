@@ -21,6 +21,8 @@ pack_home() {
     else printf '%s\n' "$HOME/ow2-pack"; fi
 }
 
+# Where the pack's own noise goes when satoru is driving. DXMT's log is a different
+# question and lives in the home, because the manifest points the launcher there.
 logs_dir() {
     if [ -n "${SATORU_LOGS:-}" ]; then printf '%s\n' "$SATORU_LOGS"
     else printf '%s\n' "$(pack_home)/logs"; fi
