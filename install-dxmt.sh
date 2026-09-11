@@ -36,36 +36,7 @@ HOME_DIR=$(pack_home)
 
 case "$MODE" in
 verify)
-    # Which DXMT the running game actually loaded. Do not trust the bottle's system32:
-    # CrossOver attaches backends through DLL overrides, so what is on disk there says
-    # nothing about what is mapped.
-    P=$(pgrep -f '[O]verwatch\.exe' | head -1) || true
-    [ -n "${P:-}" ] || die10 "Overwatch.exe is not running — start a match, then run --verify."
-    printf 'game pid %s\n' "$P"
-    mods=$(lsof -p "$P" 2>/dev/null || true)
-    ours=$(printf '%s\n' "$mods" | grep -cF "$HOME_DIR/dxmt" || true)
-    bottled=$(printf '%s\n' "$mods" | grep -cE '/Bottles/[^/]*/dxmt/' || true)
-    theirs=$(printf '%s\n' "$mods" | grep -cE '/Applications/CrossOver\.app/.*/lib/dxmt/' || true)
-    d3dm=$(printf '%s\n' "$mods" | grep -ci 'D3DMetal' || true)
-    printf '  modules from this pack (%s) : %s\n' "$HOME_DIR/dxmt" "$ours"
-    printf '  modules from inside a bottle      : %s\n' "$bottled"
-    printf '  modules from CrossOver.app        : %s\n' "$theirs"
-    printf '  D3DMetal modules                  : %s\n' "$d3dm"
-    if [ "$ours" -gt 0 ] && [ "$theirs" -eq 0 ] && [ "$d3dm" -eq 0 ]; then
-        printf 'OK — the game is running this pack DXMT.\n'
-    elif [ "$theirs" -gt 0 ]; then
-        printf 'NOT OK — CrossOver bundled DXMT won. Do not patch the bundle; open an issue.\n' >&2
-        exit 1
-    elif [ "$bottled" -gt 0 ]; then
-        printf 'NOT OK — an older install left DLLs inside the bottle and they won. Run
-uninstall.sh, delete <bottle>/dxmt, then install again.\n' >&2
-        exit 1
-    else
-        printf 'NOT OK — no DXMT at all. Check Graphics API is DX11 in the game video settings,
-and that the game was started after the last install (the bottle reads its settings when a
-wine session starts).\n' >&2
-        exit 1
-    fi
+    verify_modules "$HOME_DIR"
     ;;
 
 revert)

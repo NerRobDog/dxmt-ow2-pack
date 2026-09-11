@@ -58,13 +58,56 @@ resolve_bottle() {
     return 1
 }
 
-# Busy means a wineserver holds THIS bottle's prefix. Never `pgrep wineserver`: this
-# machine runs bottles for three other games, and refusing — or worse, killing — on
-# someone else's session is a bigger failure than the one it prevents.
+# Busy means a wine session holds THIS bottle. Never `pgrep wineserver`: this machine
+# runs bottles for three other games, and refusing — or worse, killing — on someone
+# else's session is a bigger failure than the one it prevents.
+#
+# Two things make the obvious version of this check useless, both measured rather
+# than assumed. wineserver holds the prefix ROOT open (fd 4) and nothing under
+# drive_c, so asking about drive_c misses it. And lsof truncates COMMAND to nine
+# characters, so "wineserver" is printed as "wineserve" and a grep for the full name
+# never matches. On top of that, `lsof +D` on a bottle with a 77 GB game in it walks
+# the whole tree and takes minutes. So: ask about the one directory that answers.
 bottle_busy() {
     bottle="$1"
     command -v lsof >/dev/null 2>&1 || return 1
-    lsof +D "$bottle/drive_c" 2>/dev/null | grep -q 'wineserver\|wine64\|Overwatch' && return 0
+    lsof -- "$bottle" 2>/dev/null | awk 'NR > 1 { print $1 }' | sort -u \
+        | grep -qE '^(wine|Overwatc|Battle|explorer|services|svchost|rpcss|plugplay|winedevi|cxstart|start\.)' \
+        && return 0
+    return 1
+}
+
+# Which DXMT the running game actually loaded. system32 says nothing: CrossOver
+# attaches backends with DLL overrides, so the files there are wine builtins whatever
+# is mapped. Only the loaded modules of the running game tell the truth, and the
+# launcher is not the game.
+verify_modules() {
+    home="$1"
+    pid=$(pgrep -f '[O]verwatch\.exe' | head -1) || true
+    [ -n "${pid:-}" ] || die10 "Overwatch.exe is not running — start a match, then verify."
+    printf 'game pid %s\n' "$pid"
+    mods=$(lsof -p "$pid" 2>/dev/null || true)
+    ours=$(printf '%s\n' "$mods" | grep -cF "$home/dxmt" || true)
+    bottled=$(printf '%s\n' "$mods" | grep -cE '/Bottles/[^/]*/dxmt/' || true)
+    theirs=$(printf '%s\n' "$mods" | grep -cE '/Applications/CrossOver\.app/.*/lib/dxmt/' || true)
+    d3dm=$(printf '%s\n' "$mods" | grep -ci 'D3DMetal' || true)
+    printf '  modules from this pack (%s) : %s\n' "$home/dxmt" "$ours"
+    printf '  modules from inside a bottle      : %s\n' "$bottled"
+    printf '  modules from CrossOver.app        : %s\n' "$theirs"
+    printf '  D3DMetal modules                  : %s\n' "$d3dm"
+    if [ "$ours" -gt 0 ] && [ "$theirs" -eq 0 ] && [ "$d3dm" -eq 0 ]; then
+        printf 'OK — the game is running this pack DXMT.\n'
+        return 0
+    elif [ "$theirs" -gt 0 ]; then
+        printf 'NOT OK — CrossOver bundled DXMT won. Do not patch the bundle; open an issue.\n' >&2
+    elif [ "$bottled" -gt 0 ]; then
+        printf 'NOT OK — an older install left DLLs inside the bottle and they won. Run
+uninstall.sh, delete <bottle>/dxmt, then install again.\n' >&2
+    else
+        printf 'NOT OK — no DXMT at all. Check Graphics API is DX11 in the game video settings,
+and that the game was started after the last install: a bottle reads its settings when a
+wine session starts.\n' >&2
+    fi
     return 1
 }
 
@@ -95,21 +138,35 @@ verify_payload() {
     for f in $(payload_files); do
         grep -E "[[:space:]]\.?/?$f\$" "$root/SHA256SUMS" || true
     done > "$sums"
-    if [ -s "$sums" ]; then
-        ( cd "$root" && shasum -a 256 -c "$sums" >/dev/null 2>&1 ) || {
-            rm -f "$sums"
-            die12 "the DXMT files do not match the SHA256SUMS this pack shipped with — download it again"
-        }
+    # A SHA256SUMS that mentions none of the five is not a pass, it is a pack whose
+    # manifest of itself does not describe itself.
+    want=$(payload_files | wc -l | tr -d ' ')
+    got=$(wc -l < "$sums" | tr -d ' ')
+    if [ "$got" != "$want" ]; then
+        rm -f "$sums"
+        die12 "SHA256SUMS does not cover the DXMT files ($got of $want listed) — download the pack again"
     fi
+    ( cd "$root" && shasum -a 256 -c "$sums" >/dev/null 2>&1 ) || {
+        rm -f "$sums"
+        die12 "the DXMT files do not match the SHA256SUMS this pack shipped with — download it again"
+    }
     rm -f "$sums"
 }
 
 # Only d3d11.dll carries a stamp, and it is generated at configure time from
 # `git describe`, so a build nobody reconfigured has none.
+# Only d3d11.dll carries a stamp, generated at configure time from `git describe`, so
+# a build nobody reconfigured has none. `strings` is an Xcode Command Line Tools shim
+# and is missing on a clean Mac, so fall back to grep, which reads the same bytes.
 build_id() {
     root="${1:-$PACK_ROOT}"
-    strings "$root/dxmt/x86_64-windows/d3d11.dll" 2>/dev/null \
-        | grep -m1 -oE 'v0\.[0-9]+[-0-9a-z.]*' || true
+    dll="$root/dxmt/x86_64-windows/d3d11.dll"
+    [ -f "$dll" ] || return 0
+    if command -v strings >/dev/null 2>&1; then
+        strings "$dll" 2>/dev/null | grep -m1 -oE 'v0\.[0-9]+[-0-9a-z.]*' || true
+    else
+        LC_ALL=C grep -a -m1 -oE 'v0\.[0-9]+[-0-9a-z.]*' "$dll" 2>/dev/null || true
+    fi
 }
 
 # Everything this pack writes into a bottle. Named once, used by setup, uninstall and

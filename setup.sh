@@ -87,7 +87,6 @@ mkdir -p "$HOME_DIR" "$LOGS"
 rm -rf "$HOME_DIR/dxmt"
 cp -R "$PACK_ROOT/dxmt" "$HOME_DIR/dxmt"
 cp "$PACK_ROOT/dxmt.conf" "$HOME_DIR/dxmt.conf"
-printf '%s\n' "$STAMP" > "$HOME_DIR/BUILD-ID"
 printf '%s\n' "$BOTTLE" > "$HOME_DIR/.bottle"
 
 # A tarball downloaded in a browser carries the quarantine flag. The DLLs are loaded
@@ -95,7 +94,14 @@ printf '%s\n' "$BOTTLE" > "$HOME_DIR/.bottle"
 # drop — and satoru has already done it when it is the one driving.
 xattr -dr com.apple.quarantine "$HOME_DIR/dxmt" 2>/dev/null || true
 
-sed -e "s|__HOME__|$HOME_DIR|g" -e "s|__PACK__|$PACK_ROOT|g" "$PACK_ROOT/ow2.sh" > "$HOME_DIR/ow2.sh"
+# The launcher lives in the home and must keep working when the unpacked pack is
+# gone: the contract calls the cache erasable, and satoru replaces it wholesale on
+# every install. So the home gets its own copy of everything the launcher calls.
+cp "$PACK_ROOT/cxenv.py" "$PACK_ROOT/common.sh" "$HOME_DIR/"
+# sed replacement text is not literal: & means "the whole match" and a path may
+# contain one. Escape it, and the delimiter, before substituting.
+esc_home=$(printf '%s' "$HOME_DIR" | sed -e 's/[&|\\]/\\&/g')
+sed -e "s|__HOME__|$esc_home|g" "$PACK_ROOT/ow2.sh" > "$HOME_DIR/ow2.sh"
 chmod +x "$HOME_DIR/ow2.sh"
 
 [ -f "$CONF.dxmt-ow2-pack.bak" ] || cp "$CONF" "$CONF.dxmt-ow2-pack.bak"
@@ -132,8 +138,13 @@ In the game's video settings keep Graphics API on DX11. DXMT has no D3D12 path, 
 on DX12 none of this applies.
 
 Check it is really this pack's DXMT that got loaded, with the game running:
-  $PACK_ROOT/install-dxmt.sh --verify
+  $HOME_DIR/ow2.sh --verify
 LOCAL
+
+# Last, and only now: the marker that says this home is finished. preflight answers
+# 11 on the strength of it, so writing it earlier would let an install interrupted
+# halfway be mistaken for a complete one.
+printf '%s\n' "$STAMP" > "$HOME_DIR/BUILD-ID"
 
 printf '\nInstalled DXMT %s\n  home:   %s\n  bottle: %s (cxbottle.conf backed up)\n' \
     "$STAMP" "$HOME_DIR" "$BOTTLE"

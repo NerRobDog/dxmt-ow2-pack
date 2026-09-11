@@ -3,17 +3,20 @@ contract = 1
 [game]
 id      = "ow2"
 name    = "Overwatch 2"
-status  = "playable"
+status  = "rc"
 summary = "13 GB resident down to 3.8 GB, flat 60 by Metal pacing - runs in your CrossOver bottle"
 
 notes = """
-Plays well on the DXMT fork: d3d11.releaseShaderIR takes the game from 13 GB
-resident to 3.8 GB and stops the swapping, and preferredMaxFrameRate=60 turns a
-38-87 fps sawtooth into a flat 16.67 ms. The pack installs its DXMT into its own
-home and points your existing CrossOver bottle at it; it does not ship a Wine
-engine of its own, so CrossOver with Battle.net and Overwatch installed is the one
-thing you need to bring. Roughly 15 hours of matches in the first week across an
-M1 Pro and an M5 Air, on CrossOver's own Wine engine, with no account action taken.
+The DXMT fork takes the game from 13 GB resident to 3.8 GB and stops the swapping
+(d3d11.releaseShaderIR), and hands frame pacing to Metal, which turns a 38-87 fps
+sawtooth into a flat 16.67 ms. Those numbers were measured over roughly 15 hours of
+matches on an M1 Pro and an M5 Air, with the DLLs installed by hand, on CrossOver's
+own Wine engine, and no account action was taken.
+
+What is new here is the installing, not the translation layer: this pack puts the
+same build in its own home and points your bottle at it, and that path has not yet
+been confirmed on a running match. It stays rc until it has. You bring CrossOver
+with Battle.net and Overwatch in a bottle; the pack ships no Wine engine.
 """
 
 [source]

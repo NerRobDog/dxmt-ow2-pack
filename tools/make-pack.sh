@@ -90,6 +90,9 @@ if [ -n "$PREFLIGHT" ]; then
     2|127) die "the staged pack answered $code to \`$PREFLIGHT\` — it does not implement
 the manifest it ships with. Build refused: this is how a release ends up older than the
 manifest pointing at it." ;;
+    12) die "the staged pack answered 12: its own files do not match the SHA256SUMS just
+written for them. Build refused — a release that refuses itself on arrival is worse than
+no release." ;;
     *) echo "  answered $code — understood, good enough to ship" ;;
   esac
 fi

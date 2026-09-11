@@ -18,6 +18,7 @@ usage:
   cxenv.py unset <conf> KEY...              # remove those keys
   cxenv.py get   <conf> KEY                 # print the value, or nothing
 """
+import os
 import re
 import sys
 
@@ -55,8 +56,19 @@ def unset_keys(path, keys):
 
 
 def write(path, head, block, tail):
-    with open(path, "w", encoding="utf-8") as fh:
+    """Write through a temporary file in the same directory, then rename.
+
+    This is the one file a bottle cannot do without, and truncating it in place
+    means a full disk or a killed process can leave a bottle with half a config.
+    os.replace is atomic within a filesystem, so a reader sees the old file or the
+    new one and never a partial one.
+    """
+    tmp = path + ".dxmt-ow2-pack.tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
         fh.write(head + block + tail)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)
 
 
 def get_key(path, key):
