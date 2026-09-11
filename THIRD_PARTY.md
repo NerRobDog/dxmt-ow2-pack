@@ -1,7 +1,9 @@
 # Third party
 
-Nothing in this repository is a binary. What the installer puts into your bottle is DXMT, built
-from source; this file says which source.
+Nothing in this repository is a binary. A release of it is not so simple: the tarball carries a
+built DXMT, because asking someone to set up a mingw cross toolchain before they can play is not
+an install. This file says exactly which source that build came from, and the release names the
+hash of every file it ships.
 
 | Component | Upstream | Our fork | License |
 |---|---|---|---|
@@ -20,13 +22,26 @@ from source; this file says which source.
 Nothing from this work goes upstream: 3Shain/dxmt does not accept AI-assisted contributions.
 Findings are reported there as issue text, never as pull requests.
 
-## When a release exists
+## What a release ships
 
-A published release will name the exact commit of `NerRobDog/dxmt` it was built from, the tag on
-that fork, and the sha256 of every file — the same rules the
-[AoE IV pack](https://github.com/NerRobDog/dxmt-aoe4-pack) follows. All DLLs in one release come
-from one commit and one build directory; a config key the shipped DLL does not know is a
-packaging error, not a harmless extra.
+The tarball contains, under `dxmt/`, five files from one build of
+[NerRobDog/dxmt](https://github.com/NerRobDog/dxmt): `x86_64-windows/d3d11.dll`, `dxgi.dll`,
+`d3d10core.dll`, `winemetal.dll` and `x86_64-unix/winemetal.so`. They are LGPL 2.1, the source is
+the fork linked above, and the build is identified three ways that have to agree:
+
+| | |
+|---|---|
+| commit | `8a9f4b749b3dce1f0340b7f92b4ce5d300d22421`, branch `main` |
+| tag | `v0.80-ow2-0.3` |
+| stamp inside `d3d11.dll` | `v0.80-ow2-0.3` — generated at configure time from `git describe` |
+
+`SHA256SUMS` in the tarball covers every file in it, and `setup.sh` checks the five above against
+it before installing anything. All of them come from one commit and one build directory: a mixed
+set is the most reliable way to spend an evening on a bug that is not in the code. A config key
+the shipped DLL does not know is a packaging error, not a harmless extra.
+
+Building it yourself instead is supported and is the same code:
+`./install-dxmt.sh --dlls <your meson install directory>`.
 
 ## Not distributed, ever
 

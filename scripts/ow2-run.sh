@@ -31,9 +31,16 @@ COMP=$(ps -Ao time,comm | grep -i mtlcompiler | grep -v grep \
 
 # Which backend is actually loaded. Do not trust system32 -- CrossOver attaches
 # backends through DLL overrides, so the files there are Wine builtins regardless.
-if   [ "$(lsof -p "$P" 2>/dev/null | grep -c 'lib/dxmt')" -gt 0 ]; then BACKEND=dxmt
-elif [ "$(lsof -p "$P" 2>/dev/null | grep -c 'D3DMetal')" -gt 0 ]; then BACKEND=d3dmetal
-elif [ "$(lsof -p "$P" 2>/dev/null | grep -c 'lib/dxvk')" -gt 0 ]; then BACKEND=dxvk
+#
+# This pack installs its DXMT into the game home, so a match on the home comes
+# first; lib/dxmt covers CrossOver's own bundled copy and the older layout that
+# put the DLLs inside the bottle.
+MODS=$(lsof -p "$P" 2>/dev/null)
+PACK_HOME="${SATORU_GAME_HOME:-${OW2_PACK_HOME:-$HOME/ow2-pack}}"
+if   [ "$(printf '%s\n' "$MODS" | grep -cF "$PACK_HOME/dxmt")" -gt 0 ]; then BACKEND=dxmt
+elif [ "$(printf '%s\n' "$MODS" | grep -cE '/dxmt/x86_64-(windows|unix)/')" -gt 0 ]; then BACKEND=dxmt
+elif [ "$(printf '%s\n' "$MODS" | grep -c 'D3DMetal')" -gt 0 ]; then BACKEND=d3dmetal
+elif [ "$(printf '%s\n' "$MODS" | grep -c 'lib/dxvk')" -gt 0 ]; then BACKEND=dxvk
 else BACKEND=wined3d; fi
 
 # DXMT keeps a persistent SQLite shader cache; the other backends have none.
@@ -53,7 +60,9 @@ else
   GM="no-xcode"
 fi
 
-CONF=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$HOME/ow2-dxmt.conf" 2>/dev/null \
+DXMT_CONF="${DXMT_CONFIG_FILE:-$PACK_HOME/dxmt.conf}"
+[ -f "$DXMT_CONF" ] || DXMT_CONF="$HOME/ow2-dxmt.conf"
+CONF=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$DXMT_CONF" 2>/dev/null \
        | tr '\n' ';' | tr -d ',"')
 [ -z "$CONF" ] && CONF="(defaults)"
 
