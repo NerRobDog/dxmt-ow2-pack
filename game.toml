@@ -4,25 +4,38 @@ contract = 1
 id      = "ow2"
 name    = "Overwatch 2"
 status  = "playable"
-summary = "13 GB resident down to 3.8 GB, flat 60 by Metal pacing - installed by hand"
+summary = "13 GB resident down to 3.8 GB, flat 60 by Metal pacing - runs in your CrossOver bottle"
 
 notes = """
 Plays well on the DXMT fork: d3d11.releaseShaderIR takes the game from 13 GB
 resident to 3.8 GB and stops the swapping, and preferredMaxFrameRate=60 turns a
-38-87 fps sawtooth into a flat 16.67 ms. There is no release to install yet
-because the DXMT build has to be compiled from the fork; the repository explains
-how. Roughly 15 hours of matches in the first week across an M1 Pro and an M5 Air,
-on CrossOver's own Wine engine, with no account action taken.
+38-87 fps sawtooth into a flat 16.67 ms. The pack installs its DXMT into its own
+home and points your existing CrossOver bottle at it; it does not ship a Wine
+engine of its own, so CrossOver with Battle.net and Overwatch installed is the one
+thing you need to bring. Roughly 15 hours of matches in the first week across an
+M1 Pro and an M5 Air, on CrossOver's own Wine engine, with no account action taken.
 """
 
 [source]
 kind = "none"
 
 [requires]
-arch  = "arm64"
-macos = ">=26"
+arch    = "arm64"
+macos   = ">=26"
+disk_gb = 1
 
 [install]
-home_authoritative = false
-foreign_note = "modifies your CrossOver bottle - the DLLs go into it and a backup of cxbottle.conf is kept"
+home_authoritative = true
+foreign_note = "modifies your CrossOver bottle - one file, cxbottle.conf, and the previous copy is kept beside it"
 manual_url   = "https://github.com/NerRobDog/dxmt-ow2-pack#install"
+
+[paths]
+profile = "README-local.txt"
+logs    = "logs"
+
+[commands]
+preflight    = "bash setup.sh --preflight"
+install      = "bash setup.sh"
+launch       = "ow2.sh"
+launch_plain = "ow2.sh --plain"
+uninstall    = "bash uninstall.sh"
